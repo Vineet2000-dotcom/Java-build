@@ -11,7 +11,6 @@ env:
 
 jobs:
   build-and-push:
-
     runs-on: ubuntu-latest
 
     permissions:
@@ -24,36 +23,37 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Step 2: Debug GitHub OIDC claims
+      - name: Debug OIDC Claims
+        uses: github/actions-oidc-debugger@main
+        with:
+          audience: sts.amazonaws.com
 
-      # Step 2: Configure AWS authentication
+      # Step 3: Configure AWS authentication
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-2
+          aws-region: ${{ env.AWS_REGION }}
 
-
-      # Step 3: Login to Amazon ECR
+      # Step 4: Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-
-      # Step 4: Build Docker Image
+      # Step 5: Build Docker Image
       - name: Build Docker Image
         run: |
-          docker build -t java-ecr-demo:latest .
+          docker build -t ${{ env.ECR_REPOSITORY }}:latest .
 
-
-      # Step 5: Tag Docker Image
+      # Step 6: Tag Docker Image
       - name: Tag Docker Image
         run: |
-          docker tag java-ecr-demo:latest \
-          ${{ steps.login-ecr.outputs.registry }}/java-ecr-demo:latest
+          docker tag ${{ env.ECR_REPOSITORY }}:latest \
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
 
-
-      # Step 6: Push Docker Image to ECR
+      # Step 7: Push Docker Image to ECR
       - name: Push Docker Image to ECR
         run: |
           docker push \
-          ${{ steps.login-ecr.outputs.registry }}/java-ecr-demo:latest
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
