@@ -32,7 +32,7 @@ jobs:
         run: docker build -t java-ecr-demo:npe .
 
       - name: Tag Docker Image
-        run: docker tag java-ecr-demo:npe 884264985159.dkr.ecr.us-east-2.amazonaws.com/java-ecr-demo:latest
+        run: docker tag java-ecr-demo:npe 884264985159.dkr.ecr.us-east-2.amazonaws.com/java-ecr-demo:npe
 
       - name: Push Docker Image
-        run: docker push 884264985159.dkr.ecr.us-east-2.amazonaws.com/java-ecr-demo:latest
+        run: docker push 884264985159.dkr.ecr.us-east-2.amazonaws.com/java-ecr-demo:npe
