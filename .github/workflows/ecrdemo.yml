@@ -19,29 +19,59 @@ jobs:
 
     steps:
 
+      # Step 1: Download code from GitHub repository
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Step 2: Debug GitHub OIDC Claims
+      - name: Debug GitHub OIDC Claims
+        env:
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTIONS_ID_TOKEN_REQUEST_URL: ${{ env.ACTIONS_ID_TOKEN_REQUEST_URL }}
+        run: |
+          RESPONSE=$(curl -s \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
+
+          TOKEN=$(echo "$RESPONSE" | jq -r '.value')
+
+          PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2 | base64 -d 2>/dev/null)
+
+          echo "OIDC claims:"
+          echo "$PAYLOAD" | jq '{
+            sub: .sub,
+            aud: .aud,
+            iss: .iss,
+            repository: .repository,
+            repository_owner: .repository_owner,
+            ref: .ref
+          }'
+
+      # Step 3: Configure AWS authentication
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # Step 4: Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # Step 5: Build Docker Image
       - name: Build Docker Image
         run: |
           docker build -t ${{ env.ECR_REPOSITORY }}:latest .
 
+      # Step 6: Tag Docker Image
       - name: Tag Docker Image
         run: |
           docker tag \
             ${{ env.ECR_REPOSITORY }}:latest \
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
 
+      # Step 7: Push Docker Image to ECR
       - name: Push Docker Image to ECR
         run: |
           docker push \
