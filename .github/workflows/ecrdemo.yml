@@ -1,0 +1,59 @@
+name: Build and Push Java App to ECR
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: java-ecr-demo
+
+jobs:
+  build-and-push:
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+
+      # Step 1: Download code from GitHub repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+
+      # Step 2: Configure AWS authentication
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-2
+
+
+      # Step 3: Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+
+      # Step 4: Build Docker Image
+      - name: Build Docker Image
+        run: |
+          docker build -t java-ecr-demo:latest .
+
+
+      # Step 5: Tag Docker Image
+      - name: Tag Docker Image
+        run: |
+          docker tag java-ecr-demo:latest \
+          ${{ steps.login-ecr.outputs.registry }}/java-ecr-demo:latest
+
+
+      # Step 6: Push Docker Image to ECR
+      - name: Push Docker Image to ECR
+        run: |
+          docker push \
+          ${{ steps.login-ecr.outputs.registry }}/java-ecr-demo:latest
